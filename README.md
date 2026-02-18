@@ -53,8 +53,6 @@ $ weechat
 1. Very basic features implemented against [RFC 1459](https://www.rfc-editor.org/rfc/rfc1459)
 2. Channel: `Public` (MeshCore) maps to `#public` (IRC); no other channels
 3. Tested with a few basic IRC clients
-4. No message sanitization; use at own risk
-5. No automated hardware reconnection
 
 To debug the protocol, start the bridge server with the `--verbose` flag.
 

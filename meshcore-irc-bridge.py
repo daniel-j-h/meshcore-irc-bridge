@@ -34,13 +34,39 @@ class Bridge:
             return
 
         payload = event.payload
-        pubkey_prefix = payload.get("pubkey_prefix", "")
-        message = payload.get("text", "")
 
-        contact = self.mesh.get_contact_by_key_prefix(pubkey_prefix) if pubkey_prefix else None
-        sender_nick = contact["adv_name"] if contact else f"mesh_{pubkey_prefix[:8]}"
+        if payload.get("type") != "CHAN":
+            return
 
-        await self.client.send(f":{sender_nick}!{sender_nick}@mesh PRIVMSG #public :{message}")
+        if payload.get("channel_idx") != 0:
+            return
+
+        if payload.get("txt_type") != 0:
+            return
+
+        message = payload.get("text")
+
+        if not message:
+            return
+
+        parts = message.split(":", 1)
+
+        if len(parts) != 2:
+            return
+
+        # need better way to get contact name for a channel
+        # message; protocol does not even contain pub key
+        #nick = parts[0].strip()
+        #message = parts[1].strip()
+        nick = "mesh"
+        message = parts[0] + ":" + parts[1]
+
+        # need better sanitization
+        message = message.replace("\r", "")
+        message = message.replace("\n", " ")
+        message = message.replace("\0", "")
+
+        await self.client.send(f":{nick}!{nick}@mesh PRIVMSG #public :{message}")
 
     async def _on_mesh_private_msg(self, event):
         logging.debug(event)
@@ -49,13 +75,30 @@ class Bridge:
             return
 
         payload = event.payload
-        pubkey_prefix = payload.get("pubkey_prefix", "")
-        message = payload.get("text", "")
 
-        contact = self.mesh.get_contact_by_key_prefix(pubkey_prefix) if pubkey_prefix else None
-        sender_nick = contact["adv_name"] if contact else f"mesh_{pubkey_prefix[:8]}"
+        if payload.get("type") != "PRIV":
+            return
 
-        await self.client.send(f":{sender_nick}!{sender_nick}@mesh PRIVMSG {self.client.nick} :{message}")
+        if payload.get("txt_type") != 0:
+            return
+
+        pubkey = payload.get("pubkey_prefix")
+        text = payload.get("text")
+
+        if not pubkey or not text:
+            return
+
+        # need better way to get contact name for a private
+        # message; load contacts and cache and from adverts
+        nick = f"{pubkey[:12]}"
+        message = text.strip()
+
+        # need better sanitization
+        message = message.replace("\r", "")
+        message = message.replace("\n", " ")
+        message = message.replace("\0", "")
+
+        await self.client.send(f":{nick}!{nick}@mesh PRIVMSG {self.client.nick} :{message}")
 
     async def _handle_client(self, reader, writer):
         logging.debug("IRC client connected")
