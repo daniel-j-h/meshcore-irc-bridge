@@ -4,6 +4,8 @@ Simple IRC server bridge on top of MeshCore
 
 Use your favorite IRC client to join the mesh
 
+![](./about.png)
+
 
 # Usage
 
