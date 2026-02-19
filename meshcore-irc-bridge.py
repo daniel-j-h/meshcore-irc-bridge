@@ -185,8 +185,10 @@ class Bridge:
 
         client.user = params.split(" ")[0]
 
+        contacts = self.mesh.contacts.keys()
+
         await client.send(f":mesh 001 {client.nick} :Welcome to MeshCore")
-        await client.send(f":mesh 002 {client.nick} :0 contacts")
+        await client.send(f":mesh 002 {client.nick} :{len(contacts)} contacts")
         await client.send(f":mesh 376 {client.nick} :End MOTD")
 
     async def _handle_quit(self, client, params):
@@ -269,12 +271,28 @@ class Bridge:
             await client.send(f":mesh 412 {client.nick} :No text to send")
             return
 
-        if target == "#public":
-            pass
+        if target.startswith("#"):
+            if target == "#public":
+                result = await self.mesh.commands.send_chan_msg(0, msg)
+
+                if result.type == EventType.ERROR:
+                    await client.send(f":mesh NOTICE {client.nick} :Failed to send message to {target}")
+            else:
+                await client.send(f":mesh 401 {client.nick} {target} :No such nick/channel")
+
         elif target == client.nick:
             await client.send(f":{client.prefix} PRIVMSG {client.nick} :{msg}")
+
         else:
-            await client.send(f":mesh 401 {client.nick} {target} :No such nick/channel")
+            contact = self.mesh.get_contact_by_key_prefix(target)
+
+            if contact:
+                result = await self.mesh.commands.send_msg_with_retry(contact, msg)
+
+                if not result:
+                    await client.send(f":mesh NOTICE {client.nick} :Failed to send message to {target}")
+            else:
+                await client.send(f":mesh 401 {client.nick} {target} :No such nick/channel")
 
     async def _handle_whois(self, client, params):
         parts = params.split(" ")
